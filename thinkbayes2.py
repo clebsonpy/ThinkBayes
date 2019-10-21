@@ -56,4 +56,19 @@ class Suite(Pmf):
             total += prob
             if total >= p:
                 return val
-            
+    
+    
+    def CredibleInterval(self, inter):
+        greater = 100 - (100 - inter)/2
+        lower = (100 - inter)/2
+        
+        return self.Percentile(lower), self.Percentile(greater)
+    
+    def summarize(self, inter):
+        
+        mls = 'Máxima Verossimilhança: {} \n'.format(self.MaximumLikelihood())
+        mean = 'Média: {}\n'.format(self.mean())
+        median = 'Mediana: {}\n'.format(self.Percentile(50))
+        ci = 'CI: {}'.format(self.CredibleInterval(inter))
+        
+        return mls+mean+median+ci
