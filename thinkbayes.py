@@ -696,7 +696,8 @@ def MakePmfFromItems(t, name=''):
     Returns:
         Pmf object
     """
-    pmf = Pmf(dict(t), name)
+    d = dict(list(t))
+    pmf = Pmf(d, name)
     pmf.Normalize()
     return pmf
 
@@ -1277,7 +1278,8 @@ class EstimatedPdf(Pdf):
     """Represents a PDF estimated by KDE."""
 
     def __init__(self, sample):
-        """Estimates the density function based on a sample.
+        """
+        Estimates the density function based on a sample.
 
         sample: sequence of data
         """
