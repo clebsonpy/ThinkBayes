@@ -1,2 +1,3 @@
 # ThinkBayes
-Anotações de aula
+
+[Anotações de aula](https://nbviewer.jupyter.org/github/clebsonpy/ThinkBayes/tree/master/)
