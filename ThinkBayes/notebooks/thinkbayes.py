@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """This file contains code for use with "Think Bayes",
 by Allen B. Downey, available from greenteapress.com
 
@@ -18,7 +20,6 @@ Cdf: represents a discrete cumulative distribution function
 Pdf: represents a continuous probability density function
 
 """
-
 import bisect
 import copy
 import logging
@@ -28,6 +29,18 @@ import random
 
 import scipy.stats
 from scipy.special import erf, erfinv
+
+
+
+ROOT2 = math.sqrt(2)
+
+def RandomSeed(x):
+    """Initialize the random and numpy.random generators.
+
+    x: int seed
+    """
+    random.seed(x)
+    numpy.random.seed(x)
 
 
 def Odds(p):
@@ -64,7 +77,7 @@ def Probability2(yes, no):
     """Computes the probability corresponding to given odds.
 
     Example: yes=2, no=1 means 2:1 odds in favor, or 2/3 probability.
-    
+
     yes, no: int or float odds in favor
     """
     return float(yes) / (yes + no)
@@ -149,7 +162,7 @@ class _DictWrapper(object):
 
         values: map from value to probability
         """
-        for value, prob in values.iteritems():
+        for value, prob in iteritems(values):
             self.Set(value, prob)
 
     def InitPmf(self, values):
@@ -206,7 +219,7 @@ class _DictWrapper(object):
 
     def Log(self, m=None):
         """Log transforms the probabilities.
-        
+
         Removes values with probability 0.
 
         Normalizes so that the largest logprob is 0.
@@ -218,7 +231,7 @@ class _DictWrapper(object):
         if m is None:
             m = self.MaxLike()
 
-        for x, p in self.d.iteritems():
+        for x, p in iteritems(self.d):
             if p:
                 self.Set(x, math.log(p / m))
             else:
@@ -238,7 +251,7 @@ class _DictWrapper(object):
         if m is None:
             m = self.MaxLike()
 
-        for x, p in self.d.iteritems():
+        for x, p in iteritems(self.d):
             self.Set(x, math.exp(p - m))
 
     def GetDict(self):
@@ -272,8 +285,8 @@ class _DictWrapper(object):
 
     def Print(self):
         """Prints the values and freqs/probs in ascending order."""
-        for val, prob in sorted(self.d.items()):
-            print (val, prob)
+        for val, prob in sorted(iteritems(self.d)):
+            print(val, prob)
 
     def Set(self, x, y=0):
         """Sets the freq/prob associated with the value x.
@@ -314,12 +327,12 @@ class _DictWrapper(object):
 
     def Total(self):
         """Returns the total of the frequencies/probabilities in the map."""
-        total = sum(self.d.values())
+        total = sum(itervalues(self.d))
         return total
 
     def MaxLike(self):
         """Returns the largest frequency/probability in the map."""
-        return max(self.d.itervalues())
+        return max(itervalues(self.d))
 
 
 class Hist(_DictWrapper):
@@ -359,7 +372,7 @@ class Hist(_DictWrapper):
 
 class Pmf(_DictWrapper):
     """Represents a probability mass function.
-    
+
     Values can be any hashable type; probabilities are floating-point.
     Pmfs are not necessarily normalized.
     """
@@ -385,12 +398,90 @@ class Pmf(_DictWrapper):
         return MakeCdfFromPmf(self, name=name)
 
     def ProbGreater(self, x):
-        t = [prob for (val, prob) in self.d.iteritems() if val > x]
+        """Probability that a sample from this Pmf exceeds x.
+
+        x: number
+
+        returns: float probability
+        """
+        t = [prob for (val, prob) in iteritems(self.d) if val > x]
         return sum(t)
 
     def ProbLess(self, x):
-        t = [prob for (val, prob) in self.d.iteritems() if val < x]
+        """Probability that a sample from this Pmf is less than x.
+
+        x: number
+
+        returns: float probability
+        """
+        t = [prob for (val, prob) in iteritems(self.d) if val < x]
         return sum(t)
+
+    def __lt__(self, obj):
+        """Less than.
+
+        obj: number or _DictWrapper
+
+        returns: float probability
+        """
+        if isinstance(obj, _DictWrapper):
+            return PmfProbLess(self, obj)
+        else:
+            return self.ProbLess(obj)
+
+    def __gt__(self, obj):
+        """Greater than.
+
+        obj: number or _DictWrapper
+
+        returns: float probability
+        """
+        if isinstance(obj, _DictWrapper):
+            return PmfProbGreater(self, obj)
+        else:
+            return self.ProbGreater(obj)
+
+    def __ge__(self, obj):
+        """Greater than or equal.
+
+        obj: number or _DictWrapper
+
+        returns: float probability
+        """
+        return 1 - (self < obj)
+
+    def __le__(self, obj):
+        """Less than or equal.
+
+        obj: number or _DictWrapper
+
+        returns: float probability
+        """
+        return 1 - (self > obj)
+
+    def __eq__(self, obj):
+        """Less than.
+
+        obj: number or _DictWrapper
+
+        returns: float probability
+        """
+        if isinstance(obj, _DictWrapper):
+            return PmfProbEqual(self, obj)
+        else:
+            return self.Prob(obj)
+
+    def __ne__(self, obj):
+        """Less than.
+
+        obj: number or _DictWrapper
+
+        returns: float probability
+        """
+        return 1 - (self == obj)
+
+    def __hash__(self):
+        return id(self)
 
     def Normalize(self, fraction=1.0):
         """Normalizes this PMF so the sum of all probs is fraction.
@@ -426,7 +517,7 @@ class Pmf(_DictWrapper):
 
         target = random.random()
         total = 0.0
-        for x, p in self.d.items():
+        for x, p in iteritems(self.d):
             total += p
             if total >= target:
                 return x
@@ -441,7 +532,7 @@ class Pmf(_DictWrapper):
             float mean
         """
         mu = 0.0
-        for x, p in self.d.iteritems():
+        for x, p in iteritems(self.d):
             mu += p * x
         return mu
 
@@ -459,7 +550,7 @@ class Pmf(_DictWrapper):
             mu = self.Mean()
 
         var = 0.0
-        for x, p in self.d.iteritems():
+        for x, p in iteritems(self.d):
             var += p * (x - mu) ** 2
         return var
 
@@ -696,8 +787,7 @@ def MakePmfFromItems(t, name=''):
     Returns:
         Pmf object
     """
-    d = dict(list(t))
-    pmf = Pmf(d, name)
+    pmf = Pmf(dict(t), name)
     pmf.Normalize()
     return pmf
 
@@ -894,7 +984,7 @@ class Cdf(object):
 
     def Sample(self, n):
         """Generates a random sample from this distribution.
-        
+
         Args:
             n: int length of the sample
         """
@@ -1009,7 +1099,7 @@ def MakeCdfFromDict(d, name=''):
     Returns:
         Cdf object
     """
-    return MakeCdfFromItems(d.iteritems(), name)
+    return MakeCdfFromItems(iteritems(d), name)
 
 
 def MakeCdfFromHist(hist, name=''):
@@ -1102,9 +1192,7 @@ class Suite(Pmf):
         returns: the normalizing constant
         """
         for data in dataset:
-            print(data, self.Values())
             for hypo in self.Values():
-                print(data, hypo)
                 like = self.Likelihood(data, hypo)
                 self.Mult(hypo, like)
         return self.Normalize()
@@ -1141,7 +1229,7 @@ class Suite(Pmf):
     def Print(self):
         """Prints the hypotheses and their probabilities."""
         for hypo, prob in sorted(self.Items()):
-            print (hypo, prob)
+            print(hypo, prob)
 
     def MakeOdds(self):
         """Transforms from probabilities to odds.
@@ -1280,8 +1368,7 @@ class EstimatedPdf(Pdf):
     """Represents a PDF estimated by KDE."""
 
     def __init__(self, sample):
-        """
-        Estimates the density function based on a sample.
+        """Estimates the density function based on a sample.
 
         sample: sequence of data
         """
@@ -1296,7 +1383,7 @@ class EstimatedPdf(Pdf):
 
     def MakePmf(self, xs, name=''):
         ps = self.kde.evaluate(xs)
-        pmf = MakePmfFromItems(zip(xs, ps), name=name)
+        pmf = MakePmfFromItems(list(zip(xs, ps)), name=name)
         return pmf
 
 
@@ -1414,7 +1501,7 @@ def EvalGaussianPdf(x, mu, sigma):
     x: value
     mu: mean
     sigma: standard deviation
-    
+
     returns: float probability density
     """
     return scipy.stats.norm.pdf(x, mu, sigma)
@@ -1422,7 +1509,7 @@ def EvalGaussianPdf(x, mu, sigma):
 
 def MakeGaussianPmf(mu, sigma, num_sigmas, n=201):
     """Makes a PMF discrete approx to a Gaussian distribution.
-    
+
     mu: float mean
     sigma: float standard deviation
     num_sigmas: how many sigmas to extend in each direction
@@ -1447,7 +1534,7 @@ def EvalBinomialPmf(k, n, p):
     Returns the probabily of k successes in n trials with probability p.
     """
     return scipy.stats.binom.pmf(k, n, p)
-    
+
 
 def EvalPoissonPmf(k, lam):
     """Computes the Poisson PMF.
@@ -1457,11 +1544,11 @@ def EvalPoissonPmf(k, lam):
 
     returns: float probability
     """
-    # don't use the scipy function.  for lam=0 it returns NaN;
+    # don't use the scipy function (yet).  for lam=0 it returns NaN;
     # should be 0.0
-    return scipy.stats.poisson.pmf(k, lam)
+    # return scipy.stats.poisson.pmf(k, lam)
 
-    #return lam ** k * math.exp(-lam) / math.factorial(k)
+    return lam ** k * math.exp(-lam) / math.factorial(k)
 
 
 def MakePoissonPmf(lam, high, step=1):
@@ -1513,31 +1600,31 @@ def MakeExponentialPmf(lam, high, n=200):
     return pmf
 
 
-def StandardGaussianCdf(x, root2=math.sqrt(2)):
+def StandardGaussianCdf(x):
     """Evaluates the CDF of the standard Gaussian distribution.
-    
+
     See http://en.wikipedia.org/wiki/Normal_distribution
     #Cumulative_distribution_function
 
     Args:
         x: float
-                
+
     Returns:
         float
     """
-    return (erf(x / root2) + 1) / 2
+    return (erf(x / ROOT2) + 1) / 2
 
 
 def GaussianCdf(x, mu=0, sigma=1):
     """Evaluates the CDF of the gaussian distribution.
-    
+
     Args:
         x: float
 
         mu: mean parameter
-        
+
         sigma: standard deviation parameter
-                
+
     Returns:
         float
     """
@@ -1547,23 +1634,23 @@ def GaussianCdf(x, mu=0, sigma=1):
 def GaussianCdfInverse(p, mu=0, sigma=1):
     """Evaluates the inverse CDF of the gaussian distribution.
 
-    See http://en.wikipedia.org/wiki/Normal_distribution#Quantile_function  
+    See http://en.wikipedia.org/wiki/Normal_distribution#Quantile_function
 
     Args:
         p: float
 
         mu: mean parameter
-        
+
         sigma: standard deviation parameter
-                
+
     Returns:
         float
     """
-    x = root2 * erfinv(2 * p - 1)
+    x = ROOT2 * erfinv(2 * p - 1)
     return mu + x * sigma
 
 
-class Beta(Pmf):
+class Beta(object):
     """Represents a Beta distribution.
 
     See http://en.wikipedia.org/wiki/Beta_distribution
@@ -1590,6 +1677,14 @@ class Beta(Pmf):
     def Random(self):
         """Generates a random variate from this distribution."""
         return random.betavariate(self.alpha, self.beta)
+
+    def Sample(self, n):
+        """Generates a random sample from this distribution.
+
+        n: int sample size
+        """
+        size = n,
+        return numpy.random.beta(self.alpha, self.beta, size)
 
     def EvalPdf(self, x):
         """Evaluates the PDF at x."""
@@ -1619,18 +1714,10 @@ class Beta(Pmf):
 
     def MakeCdf(self, steps=101):
         """Returns the CDF of this distribution."""
-        xs = [i / (steps - 1.0) for i in xrange(steps)]
+        xs = [i / (steps - 1.0) for i in range(steps)]
         ps = [scipy.special.betainc(self.alpha, self.beta, x) for x in xs]
         cdf = Cdf(xs, ps)
         return cdf
-    
-    def MaximumLikelihood(self):
-        """Returns the value with the highest probability.
-
-        Returns: float probability
-        """
-        prob, val = max((prob, val) for val, prob in self.Items())
-        return val
 
 
 class Dirichlet(object):
